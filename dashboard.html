@@ -138,6 +138,10 @@
 
         <div class="charts-grid">
             <div class="card chart-card chart-span-2">
+                <h2>분야별 연구 분포 (레드오션 vs 블루오션 분석)</h2>
+                <div class="chart-container"><canvas id="fieldChart"></canvas></div>
+            </div>
+            <div class="card chart-card chart-span-2">
                 <h2>연도별 연구 트렌드</h2>
                 <div class="chart-container"><canvas id="yearChart"></canvas></div>
             </div>
@@ -256,6 +260,75 @@
             Chart.defaults.color = '#94a3b8';
             Chart.defaults.borderColor = 'rgba(148, 163, 184, 0.2)';
 
+            // 0. Blue Ocean Chart (Fields)
+            const fieldGroups = {
+                '철학 및 유교 (레드오션)': 0,
+                '인문/어문/교육 (레드오션)': 0,
+                '사회/법/정치 (틈새시장)': 0,
+                '무용/예술 (틈새시장)': 0,
+                '생물/자연과학 (블루오션)': 0,
+                '체육/스포츠 (블루오션)': 0
+            };
+
+            filteredData.forEach(p => {
+                const sub = p['주제분야'] || '';
+                if (sub.includes('무용') || sub.includes('미술') || sub.includes('예술') || sub.includes('서예')) {
+                    fieldGroups['무용/예술 (틈새시장)']++;
+                } else if (sub.includes('사회') || sub.includes('법') || sub.includes('신문방송') || sub.includes('정치')) {
+                    fieldGroups['사회/법/정치 (틈새시장)']++;
+                } else if (sub.includes('인문') || sub.includes('문학') || sub.includes('어학') || sub.includes('교육') || sub.includes('역사')) {
+                    fieldGroups['인문/어문/교육 (레드오션)']++;
+                } else if (sub.includes('철학') || sub.includes('유교') || sub.includes('사상') || sub.includes('학제간연구')) {
+                    fieldGroups['철학 및 유교 (레드오션)']++;
+                } else {
+                    // Default to philosophy/humanities if unknown
+                    fieldGroups['철학 및 유교 (레드오션)']++; 
+                }
+            });
+
+            const fieldLabels = Object.keys(fieldGroups);
+            const fieldData = Object.values(fieldGroups);
+            const fieldColors = [
+                'rgba(239, 68, 68, 0.8)', // 레드오션 (빨강)
+                'rgba(249, 115, 22, 0.8)', // 레드오션 (주황)
+                'rgba(234, 179, 8, 0.8)', // 틈새시장 (노랑)
+                'rgba(16, 185, 129, 0.8)', // 틈새시장 (초록)
+                'rgba(59, 130, 246, 0.8)', // 블루오션 (파랑)
+                'rgba(99, 102, 241, 0.8)'  // 블루오션 (남색)
+            ];
+
+            const ctxField = document.getElementById('fieldChart').getContext('2d');
+            charts.field = new Chart(ctxField, {
+                type: 'bar',
+                data: {
+                    labels: fieldLabels,
+                    datasets: [{
+                        label: '논문 수',
+                        data: fieldData,
+                        backgroundColor: fieldColors,
+                        borderRadius: 6
+                    }]
+                },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false,
+                    plugins: { 
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    if(context.raw === 0) return '논문 수: 0편 (완벽한 블루오션!)';
+                                    return '논문 수: ' + context.raw + '편';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+
             // 1. Year Trend
             const yearCounts = {};
             filteredData.forEach(p => {
@@ -329,6 +402,7 @@
         }
 
         function updateCharts() {
+            if(charts.field) charts.field.destroy();
             if(charts.year) charts.year.destroy();
             if(charts.keyword) charts.keyword.destroy();
             if(charts.org) charts.org.destroy();
